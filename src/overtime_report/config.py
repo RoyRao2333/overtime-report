@@ -1,13 +1,9 @@
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
 import json5
-from dotenv import load_dotenv
-
-load_dotenv()
 
 CONFIG_FILE_NAME = "config.json5"
 
@@ -20,7 +16,8 @@ class Config:
     llm_base_url: str
     disguise_client: str
     llm_provider: str
-    llm_api_key: Optional[str] = os.getenv("LLM_API_KEY")
+    llm_api_key: str
+    author: str
 
 
 DEFAULT_CONFIG_CONTENT = """{
@@ -52,10 +49,16 @@ DEFAULT_CONFIG_CONTENT = """{
 
   // LLM API 的基础 URL
   "llmBaseUrl": "https://api.openai.com/v1",
+  
+  // LLM API Key (必填)
+  "llmApiKey": "",
 
   // 伪装 Client，用于绕过 Provider 限制
   // 可选值: "Codex", "ClaudeCode", "GeminiCLI"
-  "disguiseClient": "Codex"
+  "disguiseClient": "",
+  
+  // Git 提交作者邮箱 (必填)
+  "author": ""
 }"""
 
 
@@ -90,14 +93,27 @@ def load_config() -> Config:
     for key, value in default_data.items():
         if key not in data:
             data[key] = value
+            
+    # Validation
+    llm_api_key = data.get("llmApiKey")
+    if not llm_api_key:
+        print(f"Error: 配置文件中未设置 llmApiKey，请修改 {config_path}。")
+        sys.exit(1)
+        
+    author = data.get("author")
+    if not author:
+        print(f"Error: 配置文件中未设置 author，请修改 {config_path}。")
+        sys.exit(1)
 
     return Config(
         ignored_files=data["ignoredFiles"],
         max_diff_lines=data["maxDiffLines"],
         llm_model=data["llmModel"],
         llm_base_url=data["llmBaseUrl"],
-        disguise_client=data.get("disguiseClient", "Codex"),
+        disguise_client=data.get("disguiseClient", ""),
         llm_provider=data.get("llmProvider", "OpenAI"),
+        llm_api_key=llm_api_key,
+        author=author,
     )
 
 
